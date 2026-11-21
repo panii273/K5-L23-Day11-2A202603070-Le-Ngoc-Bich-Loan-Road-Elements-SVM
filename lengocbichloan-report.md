@@ -78,4 +78,17 @@ Lỗi bạn mắc nhiều nhất hôm nay (theo mã QC1-xx), và cách tránh �
 Nhãn của bạn đi vào model ở đâu? Chọn một lỗi đã sửa và nói nó làm model học sai thế nào: polyline `lane` đi vào model phát hiện làn (row-anchor) làm đích x theo từng hàng; polygon `drivable` đi vào model phân đoạn vùng lái. Lỗi A07 thiếu L1: model học rằng vệt sơn mờ cạnh dải phân cách không phải vạch làn, nên khi vạch phai model không đưa ra biên trái của làn, LKA không giữ được xe trong làn đúng lúc cần nhất. Lỗi khoét lỗ quanh xe: model học rằng mặt đường dưới xe phía trước là "không đi được", làm vùng lái co lại theo xe khác thay vì theo cấu trúc đường.
 
 ## 8. (Tùy chọn, buffer) Từ polyline đến đích row-anchor
-_(Không làm.)_
+Ảnh A01, vạch R1 (vạch trắng đứt bên phải làn đang đi). Số tính bằng `python -m road_lab.rowanchor <file>.zip --image A01 --position R1` trên hai file nộp revision hiện tại.
+
+| y | 720 | 680 | 640 | 600 | 560 |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| x của chúng tôi | không có làn | không có làn | 602,2 | 543,7 | 483,6 |
+| x của bạn kia (Nguyễn Duy Khánh) | không có làn | không có làn | 603,0 | 544,8 | 486,6 |
+
+R1 của tôi đi từ (654,677) gần xe tới (459,542) ở xa; của bạn kia bắt đầu tại (652,674). Cả hai đều bắt đầu dưới hàng 680, vì đoạn sát đáy ảnh không có vệt sơn, nên hàng 720 và 680 là "không có làn".
+
+Trả lời 3 câu:
+
+1. Nếu dừng polyline sớm 40 px, điểm xa nhất lùi từ y = 542 xuống khoảng y = 582. Hàng **560** khi đó nằm ngoài polyline nên đổi thành "không có làn"; các hàng 640 và 600 giữ nguyên. Model sẽ học rằng ở hàng 560 không có vạch, tức là "nhìn" làn ngắn hơn thực tế.
+2. Hàng 720: cả hai đều "không có làn", lệch 0 px. Hàng 560: lệch 486,6 − 483,6 = **3,0 px**; hàng 640 chỉ lệch 0,8 px. Lệch ở các hàng gần xe (720, 680, 640) ảnh hưởng LKA nhiều hơn: LKA tính độ lệch ngang của xe so với tâm làn ngay phía trước. Vài pixel ở hàng gần tương ứng một khoảng ngang lớn hơn trên mặt đường so với vài pixel ở hàng xa, và sai ở đó làm lệnh đánh lái sai ngay lập tức.
+3. Không đổi về số: `x_at_y` trong `geometry.py` lấy giao điểm của polyline với từng hàng y, không phụ thuộc điểm nào vẽ trước. Chỉ khi polyline không đơn điệu theo y (cong ngược, gấp khúc) thì thứ tự điểm mới đổi kết quả, vì hàm trả về đoạn cắt đầu tiên tìm thấy. Script gặp khó là `road_check`: `lint` cảnh báo polyline vẽ từ xa về gần, và `check` bắt lỗi QC1-04 vì điểm đầu phải là điểm gần xe nhất. Điểm đầu sai cũng làm hỏng việc so hai đầu polyline với GT (ngưỡng `lane_stop_px`).
